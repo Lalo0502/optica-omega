@@ -34,6 +34,9 @@ yarn-error.log*
 # bolt
 .bolt/
 
+# supabase migrations
+supabase/migrations/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
