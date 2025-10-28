@@ -1,0 +1,261 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 220 14% 20%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 220 14% 20%;
+    --chart-1: 220 14% 20%;
+    --chart-2: 220 14% 40%;
+    --chart-3: 220 14% 60%;
+    --chart-4: 220 14% 80%;
+    --chart-5: 220 14% 30%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 32% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 210 40% 98%;
+    --chart-2: 210 40% 80%;
+    --chart-3: 210 40% 60%;
+    --chart-4: 210 40% 40%;
+    --chart-5: 210 40% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Estilos personalizados */
+.table-container {
+  @apply overflow-hidden rounded-lg border border-border;
+}
+
+.table-container table {
+  @apply w-full border-collapse;
+}
+
+.table-container thead {
+  @apply bg-muted/50;
+}
+
+.table-container th {
+  @apply px-4 py-3 text-left text-sm font-medium text-muted-foreground;
+}
+
+.table-container td {
+  @apply px-4 py-3 text-sm;
+}
+
+.table-container tr {
+  @apply border-b border-border transition-colors hover:bg-muted/30;
+}
+
+.table-container tr:last-child {
+  @apply border-0;
+}
+
+.patient-card {
+  @apply transition-all duration-200 hover:shadow-md;
+}
+
+.dashboard-card {
+  @apply transition-all duration-200 hover:shadow-md hover:border-primary/20;
+}
+
+.sidebar-link {
+  @apply transition-all duration-200;
+}
+
+.sidebar-link.active {
+  @apply bg-primary text-primary-foreground shadow-md;
+}
+
+.sidebar-link:not(.active) {
+  @apply text-muted-foreground hover:text-foreground hover:bg-muted;
+}
+
+.badge-condition {
+  @apply bg-primary/10 text-primary hover:bg-primary/20 transition-colors;
+}
+
+/* Estilos para el formulario de pacientes */
+.form-section {
+  @apply p-5 rounded-lg border border-border/60 bg-card transition-all duration-200;
+}
+
+.form-section:hover {
+  @apply border-primary/30 shadow-sm;
+}
+
+.form-section-title {
+  @apply text-sm font-medium flex items-center gap-2 mb-4 pb-2 border-b;
+}
+
+.form-section-icon {
+  @apply h-4 w-4 text-primary;
+}
+
+.form-grid {
+  @apply grid gap-4;
+}
+
+.form-grid-2 {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+.form-field {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply text-sm font-medium flex items-center gap-1.5;
+}
+
+.form-label-icon {
+  @apply h-3.5 w-3.5 text-muted-foreground;
+}
+
+.form-required {
+  @apply text-primary ml-0.5;
+}
+
+.form-input {
+  @apply w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+}
+
+.condition-card {
+  @apply p-4 rounded-lg border border-border/60 bg-card transition-all duration-200 relative;
+}
+
+.condition-card:hover {
+  @apply border-primary/30 shadow-sm;
+}
+
+.condition-card-header {
+  @apply flex justify-between items-center mb-2;
+}
+
+.condition-card-title {
+  @apply font-medium;
+}
+
+.condition-card-description {
+  @apply text-sm text-muted-foreground mb-3;
+}
+
+.condition-card-remove {
+  @apply absolute top-3 right-3 h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors;
+}
+
+.condition-empty {
+  @apply flex flex-col items-center justify-center py-8 px-4 text-center border border-dashed rounded-lg;
+}
+
+.condition-empty-icon {
+  @apply h-10 w-10 text-muted-foreground/50 mb-2;
+}
+
+.condition-empty-text {
+  @apply text-muted-foreground text-sm max-w-xs;
+}
+
+.tab-content-container {
+  @apply pt-6 pb-2;
+}
+
+.form-actions {
+  @apply flex justify-between mt-6;
+}
+
+.dialog-content-wide {
+  @apply sm:max-w-[600px] md:max-w-[700px] lg:max-w-[800px];
+}
+
+.dialog-header {
+  @apply pb-4 mb-4 border-b;
+}
+
+/* Animaciones personalizadas para login */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Animación para la barra de progreso del loader */
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s ease-in-out infinite;
+  width: 25%;
+}
