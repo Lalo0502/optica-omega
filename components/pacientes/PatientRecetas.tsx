@@ -25,6 +25,7 @@ import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { generatePrescriptionPDF } from "@/lib/pdf";
+import DeleteConfirmation from "@/components/ui/delete-confirmation";
 import {
   FileText,
   Loader2,
@@ -40,6 +41,7 @@ import {
   ArrowRight,
   Edit,
   Receipt,
+  Trash2,
 } from "lucide-react";
 import { Receta, Patient } from "@/types/pacientes";
 import RecetaForm from "./RecetaForm";
@@ -69,6 +71,7 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
   const [isEditRecetaDialogOpen, setIsEditRecetaDialogOpen] = useState(false);
   const [selectedReceta, setSelectedReceta] = useState<Receta | null>(null);
   const [patientData, setPatientData] = useState<Patient | null>(null);
+  const [deleteRecetaId, setDeleteRecetaId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -492,6 +495,64 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
       toast({
         title: "Error",
         description: "No se pudo actualizar la receta",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Eliminar receta
+  const handleDeleteReceta = async () => {
+    if (!deleteRecetaId) return;
+
+    try {
+      // 1. Eliminar detalles de la receta
+      const { error: deleteDetallesError } = await supabase
+        .from("receta_detalles")
+        .delete()
+        .eq("receta_id", deleteRecetaId);
+
+      if (deleteDetallesError) {
+        console.error(
+          "Error al eliminar detalles de receta:",
+          deleteDetallesError
+        );
+      }
+
+      // 2. Eliminar relaciones con facturas (si existen)
+      const { error: deleteRelacionesError } = await supabase
+        .from("facturas_recetas")
+        .delete()
+        .eq("receta_id", deleteRecetaId);
+
+      if (deleteRelacionesError) {
+        console.error(
+          "Error al eliminar relaciones con facturas:",
+          deleteRelacionesError
+        );
+      }
+
+      // 3. Eliminar la receta
+      const { error: deleteRecetaError } = await supabase
+        .from("recetas")
+        .delete()
+        .eq("id", deleteRecetaId);
+
+      if (deleteRecetaError) throw deleteRecetaError;
+
+      // 4. Actualizar la lista de recetas
+      setPatientRecetas(patientRecetas.filter((r) => r.id !== deleteRecetaId));
+
+      toast({
+        title: "Receta eliminada",
+        description: "La receta ha sido eliminada correctamente",
+      });
+
+      setDeleteRecetaId(null);
+    } catch (error) {
+      console.error("Error al eliminar receta:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la receta",
         variant: "destructive",
       });
     }
@@ -1046,6 +1107,15 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
                       <Edit className="h-4 w-4" />
                       <span className="hidden sm:inline">Editar</span>
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteRecetaId(receta.id)}
+                      className="h-8 gap-1 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Eliminar</span>
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -1111,6 +1181,23 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
           ))}
         </div>
       )}
+
+      {/* Confirmación de eliminación */}
+      <DeleteConfirmation
+        open={!!deleteRecetaId}
+        onOpenChange={(open) => !open && setDeleteRecetaId(null)}
+        onConfirm={handleDeleteReceta}
+        title="Eliminar Receta"
+        description="Esta acción no se puede deshacer. Se eliminará permanentemente la receta y todos sus detalles asociados."
+        itemName={
+          deleteRecetaId
+            ? `Receta del ${formatDate(
+                patientRecetas.find((r) => r.id === deleteRecetaId)
+                  ?.fecha_emision || ""
+              )}`
+            : ""
+        }
+      />
     </div>
   );
 }

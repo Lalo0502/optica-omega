@@ -231,7 +231,11 @@ export default function PatientDetails({
                       Teléfono
                     </label>
                     <p className="text-base font-semibold mt-1">
-                      {patient.telefono}
+                      {patient.telefono || (
+                        <span className="text-muted-foreground/50 text-sm">
+                          No especificado
+                        </span>
+                      )}
                     </p>
                   </div>
 

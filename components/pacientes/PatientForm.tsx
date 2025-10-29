@@ -170,14 +170,12 @@ export default function PatientForm({
               >
                 <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Teléfono</span>
-                <span className="text-primary ml-0.5">*</span>
               </Label>
               <Input
                 id="telefono"
                 value={formData.telefono}
                 onChange={handleInputChange}
                 className="w-full"
-                required
               />
             </div>
 
