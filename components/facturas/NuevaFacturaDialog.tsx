@@ -92,6 +92,106 @@ export default function NuevaFacturaDialog({
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
+  // Cargar datos pendientes desde receta
+  useEffect(() => {
+    if (open) {
+      const pendingData = localStorage.getItem("pendingInvoiceData");
+      if (pendingData) {
+        try {
+          const data = JSON.parse(pendingData);
+          // Solo cargar si los datos son recientes (menos de 5 minutos)
+          if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+            // Cargar paciente y recetas, luego seleccionar la receta específica
+            loadPacienteAndReceta(data.patientId, data.recetaId);
+          }
+          // Limpiar localStorage después de cargar
+          localStorage.removeItem("pendingInvoiceData");
+        } catch (error) {
+          console.error("Error cargando datos pendientes:", error);
+        }
+      }
+    }
+  }, [open]);
+
+  // Función para cargar paciente y seleccionar receta
+  const loadPacienteAndReceta = async (
+    patientId: string,
+    recetaId?: string
+  ) => {
+    try {
+      // 1. Cargar paciente
+      const { data: patientData, error: patientError } = await supabase
+        .from("pacientes")
+        .select("*")
+        .eq("id", patientId)
+        .single();
+
+      if (patientError) throw patientError;
+
+      if (patientData) {
+        setPacientesSeleccionados([patientData]);
+
+        // 2. Cargar recetas disponibles del paciente
+        const recetas = await cargarRecetasPaciente(patientData.id);
+        setRecetasDisponibles(recetas);
+
+        // 3. Si hay recetaId específico, seleccionarla
+        if (recetaId && recetas.length > 0) {
+          const recetaSeleccionada = recetas.find((r) => r.id === recetaId);
+          if (recetaSeleccionada) {
+            setRecetasSeleccionadas([recetaSeleccionada]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error cargando paciente y receta:", error);
+    }
+  };
+
+  // Función para cargar paciente desde ID
+  const loadPacienteFromData = async (patientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("pacientes")
+        .select("*")
+        .eq("id", patientId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setPacientesSeleccionados([data]);
+        // Cargar recetas del paciente
+        const recetas = await cargarRecetasPaciente(data.id);
+        setRecetasDisponibles(recetas);
+      }
+    } catch (error) {
+      console.error("Error cargando paciente:", error);
+    }
+  };
+
+  // Función para cargar y seleccionar receta
+  const loadRecetaFromData = async (recetaId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("recetas")
+        .select(
+          `
+          *,
+          detalles:receta_detalles(*)
+        `
+        )
+        .eq("id", recetaId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setRecetasSeleccionadas([data]);
+      }
+    } catch (error) {
+      console.error("Error cargando receta:", error);
+    }
+  };
+
   // Buscar pacientes
   const buscarPacientes = async (search: string) => {
     if (!search || search.length < 2) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -69,6 +70,7 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
   const [selectedReceta, setSelectedReceta] = useState<Receta | null>(null);
   const [patientData, setPatientData] = useState<Patient | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   // Formatear fecha para mostrar
   const formatDate = (dateString: string | null) => {
@@ -134,6 +136,24 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
         });
       }
     }
+  };
+
+  // Crear factura desde receta
+  const handleCreateInvoice = () => {
+    if (!selectedReceta || !patientData) return;
+
+    // Guardar datos en localStorage para que NuevaFacturaDialog los use
+    const invoiceData = {
+      patientId: patientData.id,
+      patientName: `${patientData.primer_nombre} ${patientData.primer_apellido}`,
+      recetaId: selectedReceta.id,
+      timestamp: Date.now(),
+    };
+
+    localStorage.setItem("pendingInvoiceData", JSON.stringify(invoiceData));
+
+    // Redirigir a facturas
+    router.push("/facturas?openDialog=true");
   };
 
   // Preparar datos para el formulario de edición
@@ -531,6 +551,15 @@ export default function PatientRecetas({ patientId }: PatientRecetasProps) {
                     Detalles de la Receta
                   </DialogTitle>
                   <div className="flex gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-8 gap-1 bg-green-600 hover:bg-green-700"
+                      onClick={handleCreateInvoice}
+                    >
+                      <Receipt className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Crear Factura</span>
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

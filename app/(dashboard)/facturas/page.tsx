@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,16 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -57,6 +48,7 @@ import { FacturaResumen, EstadoFactura } from "@/types/facturas";
 import NuevaFacturaDialog from "@/components/facturas/NuevaFacturaDialog";
 import FacturaDetallesDialog from "@/components/facturas/FacturaDetallesDialog";
 import FacturasListSkeleton from "@/components/facturas/FacturasListSkeleton";
+import DeleteConfirmation from "@/components/ui/delete-confirmation";
 
 export default function FacturasPage() {
   const [facturas, setFacturas] = useState<FacturaResumen[]>([]);
@@ -67,11 +59,23 @@ export default function FacturasPage() {
   const [selectedFacturaId, setSelectedFacturaId] = useState<string | null>(
     null
   );
-  const [facturaToDelete, setFacturaToDelete] = useState<string | null>(null);
+  const [facturaToDelete, setFacturaToDelete] = useState<{
+    id: string;
+    folio: string;
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Detectar si se debe abrir el diálogo desde otra página
+  useEffect(() => {
+    const openDialog = searchParams?.get("openDialog");
+    if (openDialog === "true") {
+      setIsDialogOpen(true);
+    }
+  }, [searchParams]);
 
   // Cargar facturas desde Supabase
   const fetchFacturas = async () => {
@@ -155,7 +159,7 @@ export default function FacturasPage() {
       const { error } = await supabase
         .from("facturas")
         .delete()
-        .eq("id", facturaToDelete);
+        .eq("id", facturaToDelete.id);
 
       if (error) throw error;
 
@@ -307,7 +311,10 @@ export default function FacturasPage() {
                               className="text-destructive focus:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setFacturaToDelete(factura.id);
+                                setFacturaToDelete({
+                                  id: factura.id,
+                                  folio: factura.folio,
+                                });
                               }}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -397,43 +404,17 @@ export default function FacturasPage() {
         onUpdate={fetchFacturas}
       />
 
-      {/* Diálogo de Confirmación para Eliminar */}
-      <AlertDialog
+      {/* Diálogo de Confirmación de Eliminación */}
+      <DeleteConfirmation
         open={!!facturaToDelete}
         onOpenChange={(open) => {
           if (!open) setFacturaToDelete(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. La factura y todos sus registros
-              relacionados (items, pagos, referencias a recetas) serán
-              eliminados permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteFactura}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Eliminando...
-                </>
-              ) : (
-                "Eliminar Factura"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleDeleteFactura}
+        title="¿Eliminar factura?"
+        description="Esta acción no se puede deshacer. La factura y todos sus registros relacionados (items, pagos, referencias a recetas) serán eliminados permanentemente."
+        itemName={facturaToDelete?.folio}
+      />
     </div>
   );
 }

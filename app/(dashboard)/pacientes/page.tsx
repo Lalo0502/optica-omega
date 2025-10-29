@@ -20,6 +20,7 @@ import PatientForm from "@/components/pacientes/PatientForm";
 import PatientList from "@/components/pacientes/PatientList";
 import PatientListSkeleton from "@/components/pacientes/PatientListSkeleton";
 import Pagination from "@/components/pacientes/Pagination";
+import DeleteConfirmation from "@/components/ui/delete-confirmation";
 
 // Cambiar el título de la página
 if (typeof document !== "undefined") {
@@ -37,6 +38,10 @@ export default function PacientesPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
   const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
+  const [patientToDelete, setPatientToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const { toast } = useToast();
 
   // Paginación
@@ -157,32 +162,44 @@ export default function PacientesPage() {
 
   // Eliminar paciente
   const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de que deseas eliminar este paciente?")) {
-      try {
-        const { error } = await supabase
-          .from("pacientes")
-          .delete()
-          .eq("id", id);
+    const patient = patients.find((p) => p.id === id);
+    if (patient) {
+      setPatientToDelete({
+        id: patient.id,
+        name: `${patient.primer_nombre} ${patient.primer_apellido}`,
+      });
+    }
+  };
 
-        if (error) {
-          throw error;
-        }
+  const confirmDelete = async () => {
+    if (!patientToDelete) return;
 
-        setPatients(patients.filter((patient) => patient.id !== id));
-        setTotalPatients((prev) => prev - 1);
+    try {
+      const { error } = await supabase
+        .from("pacientes")
+        .delete()
+        .eq("id", patientToDelete.id);
 
-        toast({
-          title: "Paciente eliminado",
-          description: "El paciente ha sido eliminado correctamente",
-        });
-      } catch (error) {
-        console.error("Error al eliminar paciente:", error);
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar el paciente",
-          variant: "destructive",
-        });
+      if (error) {
+        throw error;
       }
+
+      setPatients(
+        patients.filter((patient) => patient.id !== patientToDelete.id)
+      );
+      setTotalPatients((prev) => prev - 1);
+
+      toast({
+        title: "Paciente eliminado",
+        description: "El paciente ha sido eliminado correctamente",
+      });
+    } catch (error) {
+      console.error("Error al eliminar paciente:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el paciente",
+        variant: "destructive",
+      });
     }
   };
 
@@ -421,6 +438,18 @@ export default function PacientesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Diálogo de Confirmación de Eliminación */}
+      <DeleteConfirmation
+        open={!!patientToDelete}
+        onOpenChange={(open) => {
+          if (!open) setPatientToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="¿Eliminar paciente?"
+        description="Esta acción no se puede deshacer. El paciente y todas sus recetas asociadas serán eliminados permanentemente."
+        itemName={patientToDelete?.name}
+      />
     </div>
   );
 }
