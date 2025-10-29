@@ -87,15 +87,94 @@ export default function DashboardPage() {
 
     const fetchRecentFacturas = async () => {
       try {
-        const { data, error } = await supabase
-          .from("vista_facturas_resumen")
-          .select("*")
-          .order("fecha_emision", { ascending: false })
+        console.log("🔍 Consultando facturas recientes...");
+
+        // Primero obtener las facturas
+        const { data: facturasData, error: facturasError } = await supabase
+          .from("facturas")
+          .select("id, folio, fecha, estado, total, saldo")
+          .order("fecha", { ascending: false })
           .limit(5);
 
-        if (error) throw error;
+        if (facturasError) {
+          console.log("❌ Error facturas:", facturasError);
+          throw facturasError;
+        }
 
-        setRecentFacturas(data || []);
+        console.log("📊 Facturas recibidas:", facturasData);
+
+        // Para cada factura, obtener sus pacientes
+        const formattedData = await Promise.all(
+          (facturasData || []).map(async (factura) => {
+            console.log(
+              `🔎 Buscando pacientes para factura ${factura.folio} (ID: ${factura.id})`
+            );
+
+            // Primero obtener los IDs de pacientes de esta factura
+            const { data: relacionesData, error: relacionesError } =
+              await supabase
+                .from("facturas_pacientes")
+                .select("paciente_id")
+                .eq("factura_id", factura.id);
+
+            console.log(`🔗 Relaciones para ${factura.folio}:`, relacionesData);
+
+            if (relacionesError) {
+              console.log(`❌ Error relaciones:`, relacionesError);
+            }
+
+            // Si hay pacientes, obtenerlos directamente
+            let pacienteNombres = "";
+            if (relacionesData && relacionesData.length > 0) {
+              const pacienteIds = relacionesData.map((r) => r.paciente_id);
+
+              // Consultar directamente la tabla pacientes (ahora con segundo_nombre)
+              const { data: pacientesData, error: pacientesError } =
+                await supabase
+                  .from("pacientes")
+                  .select(
+                    "primer_nombre, segundo_nombre, primer_apellido, segundo_apellido"
+                  )
+                  .in("id", pacienteIds);
+
+              console.log(
+                `👥 Pacientes data para ${factura.folio}:`,
+                pacientesData
+              );
+
+              if (pacientesError) {
+                console.log(`❌ Error pacientes:`, pacientesError);
+              }
+
+              // Formatear nombres completos
+              pacienteNombres = (pacientesData || [])
+                .map((p: any) => {
+                  return `${p.primer_nombre} ${p.segundo_nombre || ""} ${
+                    p.primer_apellido
+                  } ${p.segundo_apellido || ""}`.trim();
+                })
+                .join(", ");
+            }
+
+            console.log(
+              `✍️ Nombre final para ${factura.folio}:`,
+              pacienteNombres
+            );
+
+            return {
+              id: factura.id,
+              folio: factura.folio,
+              fecha_emision: factura.fecha,
+              estado: factura.estado,
+              total: factura.total,
+              saldo: factura.saldo,
+              paciente_nombre: pacienteNombres || "Sin paciente asignado",
+            };
+          })
+        );
+
+        console.log("✅ Facturas formateadas:", formattedData);
+        setRecentFacturas(formattedData);
       } catch (error) {
         console.error("Error al cargar facturas recientes:", error);
       } finally {

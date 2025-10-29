@@ -78,7 +78,9 @@ export default function PatientList({
               <TableHead>Dirección</TableHead>
               <TableHead style={{ width: "100px" }}>Edad</TableHead>
               <TableHead>Notas</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="text-right" style={{ width: "140px" }}>
+                Acciones
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -219,12 +221,13 @@ export default function PatientList({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setSelectedPatient(patient.id)}
-                          className="hover:bg-primary/10 hover:text-primary"
+                          className="h-9 w-9 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                          title="Ver detalles"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -232,7 +235,8 @@ export default function PatientList({
                           variant="ghost"
                           size="icon"
                           onClick={() => handleEdit(patient)}
-                          className="hover:bg-primary/10 hover:text-primary"
+                          className="h-9 w-9 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                          title="Editar paciente"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -240,7 +244,8 @@ export default function PatientList({
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(patient.id)}
-                          className="hover:bg-destructive/10 hover:text-destructive"
+                          className="h-9 w-9 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Eliminar paciente"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
