@@ -102,11 +102,14 @@ export default function ConfiguracionPage() {
       };
 
       // Obtener datos
-      const [pacientes, recetas, facturas] = await Promise.all([
-        fetchAllRecords("pacientes"),
-        fetchAllRecords("recetas"),
-        fetchAllRecords("facturas"),
-      ]);
+      const [pacientes, recetas, facturas, citas, promociones] =
+        await Promise.all([
+          fetchAllRecords("pacientes"),
+          fetchAllRecords("recetas"),
+          fetchAllRecords("facturas"),
+          fetchAllRecords("citas"),
+          fetchAllRecords("promociones"),
+        ]);
 
       // Crear backup
       const backup = {
@@ -117,11 +120,15 @@ export default function ConfiguracionPage() {
           pacientes,
           recetas,
           facturas,
+          citas,
+          promociones,
         },
         stats: {
           total_pacientes: pacientes.length,
           total_recetas: recetas.length,
           total_facturas: facturas.length,
+          total_citas: citas.length,
+          total_promociones: promociones.length,
         },
       };
 
@@ -203,11 +210,14 @@ export default function ConfiguracionPage() {
           "Esto puede tomar unos momentos si tienes muchos registros.",
       });
 
-      const [pacientes, recetas, facturas] = await Promise.all([
-        fetchAllRecords("pacientes"),
-        fetchAllRecords("recetas"),
-        fetchAllRecords("facturas"),
-      ]);
+      const [pacientes, recetas, facturas, citas, promociones] =
+        await Promise.all([
+          fetchAllRecords("pacientes"),
+          fetchAllRecords("recetas"),
+          fetchAllRecords("facturas"),
+          fetchAllRecords("citas"),
+          fetchAllRecords("promociones"),
+        ]);
 
       // Crear objeto de backup
       const backup = {
@@ -217,11 +227,15 @@ export default function ConfiguracionPage() {
           pacientes,
           recetas,
           facturas,
+          citas,
+          promociones,
         },
         stats: {
           total_pacientes: pacientes.length,
           total_recetas: recetas.length,
           total_facturas: facturas.length,
+          total_citas: citas.length,
+          total_promociones: promociones.length,
         },
       };
 
@@ -244,7 +258,7 @@ export default function ConfiguracionPage() {
 
       toast({
         title: "Backup creado exitosamente",
-        description: `Se exportaron ${backup.stats.total_pacientes} pacientes, ${backup.stats.total_recetas} recetas y ${backup.stats.total_facturas} facturas.`,
+        description: `Se exportaron ${backup.stats.total_pacientes} pacientes, ${backup.stats.total_recetas} recetas, ${backup.stats.total_facturas} facturas, ${backup.stats.total_citas} citas y ${backup.stats.total_promociones} promociones.`,
       });
     } catch (error: any) {
       toast({
@@ -297,11 +311,14 @@ export default function ConfiguracionPage() {
         description: "Esto puede tomar unos momentos.",
       });
 
-      const [pacientes, recetas, facturas] = await Promise.all([
-        fetchAllRecords("pacientes"),
-        fetchAllRecords("recetas"),
-        fetchAllRecords("facturas"),
-      ]);
+      const [pacientes, recetas, facturas, citas, promociones] =
+        await Promise.all([
+          fetchAllRecords("pacientes"),
+          fetchAllRecords("recetas"),
+          fetchAllRecords("facturas"),
+          fetchAllRecords("citas"),
+          fetchAllRecords("promociones"),
+        ]);
 
       // Crear objeto de backup
       const backup = {
@@ -311,11 +328,15 @@ export default function ConfiguracionPage() {
           pacientes,
           recetas,
           facturas,
+          citas,
+          promociones,
         },
         stats: {
           total_pacientes: pacientes.length,
           total_recetas: recetas.length,
           total_facturas: facturas.length,
+          total_citas: citas.length,
+          total_promociones: promociones.length,
         },
       };
 
@@ -350,7 +371,7 @@ export default function ConfiguracionPage() {
 
       toast({
         title: "Backup guardado en la nube",
-        description: `Se guardaron ${backup.stats.total_pacientes} pacientes, ${backup.stats.total_recetas} recetas y ${backup.stats.total_facturas} facturas en Supabase Storage.`,
+        description: `Se guardaron ${backup.stats.total_pacientes} pacientes, ${backup.stats.total_recetas} recetas, ${backup.stats.total_facturas} facturas, ${backup.stats.total_citas} citas y ${backup.stats.total_promociones} promociones en Supabase Storage.`,
       });
     } catch (error: any) {
       toast({
@@ -383,14 +404,17 @@ export default function ConfiguracionPage() {
             throw new Error("Archivo de backup inválido");
           }
 
-          const { pacientes, recetas, facturas } = backup.data;
+          const { pacientes, recetas, facturas, citas, promociones } =
+            backup.data;
 
           // Confirmar antes de importar
           const confirmImport = window.confirm(
             `¿Estás seguro de importar este backup?\n\n` +
               `Pacientes: ${pacientes?.length || 0}\n` +
               `Recetas: ${recetas?.length || 0}\n` +
-              `Facturas: ${facturas?.length || 0}\n\n` +
+              `Facturas: ${facturas?.length || 0}\n` +
+              `Citas: ${citas?.length || 0}\n` +
+              `Promociones: ${promociones?.length || 0}\n\n` +
               `Esto agregará los datos que no existan en la base de datos actual.`
           );
 
@@ -403,6 +427,8 @@ export default function ConfiguracionPage() {
             pacientes: 0,
             recetas: 0,
             facturas: 0,
+            citas: 0,
+            promociones: 0,
           };
 
           // Importar pacientes (solo los que no existan)
@@ -453,9 +479,41 @@ export default function ConfiguracionPage() {
             }
           }
 
+          // Importar citas (solo las que no existan)
+          if (citas && citas.length > 0) {
+            for (const cita of citas) {
+              const { data: existing } = await supabase
+                .from("citas")
+                .select("id")
+                .eq("id", cita.id)
+                .single();
+
+              if (!existing) {
+                await supabase.from("citas").insert(cita);
+                importedCount.citas++;
+              }
+            }
+          }
+
+          // Importar promociones (solo las que no existan)
+          if (promociones && promociones.length > 0) {
+            for (const promocion of promociones) {
+              const { data: existing } = await supabase
+                .from("promociones")
+                .select("id")
+                .eq("id", promocion.id)
+                .single();
+
+              if (!existing) {
+                await supabase.from("promociones").insert(promocion);
+                importedCount.promociones++;
+              }
+            }
+          }
+
           toast({
             title: "Backup importado exitosamente",
-            description: `Se importaron ${importedCount.pacientes} pacientes, ${importedCount.recetas} recetas y ${importedCount.facturas} facturas nuevas.`,
+            description: `Se importaron ${importedCount.pacientes} pacientes, ${importedCount.recetas} recetas, ${importedCount.facturas} facturas, ${importedCount.citas} citas y ${importedCount.promociones} promociones nuevas.`,
           });
 
           // Recargar la página para actualizar los datos

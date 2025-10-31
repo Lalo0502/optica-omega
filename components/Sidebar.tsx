@@ -87,11 +87,11 @@ const Sidebar = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      // Esperar animación antes de navegar (sin toast)
+      // Esperar animación antes de navegar (2.5 segundos para coincidir con la animación)
       setTimeout(() => {
         router.push("/login");
         router.refresh();
-      }, 1200);
+      }, 2500);
     } catch (error: any) {
       setShowLogoutTransition(false);
       toast({
