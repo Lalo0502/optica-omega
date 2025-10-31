@@ -11,6 +11,8 @@ import {
   LogOut,
   Receipt,
   Settings,
+  Calendar,
+  Tag,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -110,6 +112,16 @@ const Sidebar = () => {
       name: "Pacientes",
       path: "/pacientes",
       icon: Users,
+    },
+    {
+      name: "Citas",
+      path: "/citas",
+      icon: Calendar,
+    },
+    {
+      name: "Promociones",
+      path: "/promociones",
+      icon: Tag,
     },
     {
       name: "Facturación",
