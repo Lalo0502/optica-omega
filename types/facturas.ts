@@ -8,6 +8,7 @@
 
 export type EstadoFactura = 'pendiente' | 'pagado' | 'cancelado';
 export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia';
+export type TipoDescuento = 'porcentaje' | 'fijo';
 
 // ============================================================================
 // MODELOS DE BASE DE DATOS
@@ -21,10 +22,17 @@ export interface Factura {
   folio: string;
   fecha: string;
   subtotal: number;
+  descuento: number;
   iva: number;
   total: number;
   saldo: number;
   estado: EstadoFactura;
+  aplicar_iva: boolean;
+  porcentaje_iva: number | null;
+  aplicar_descuento: boolean;
+  tipo_descuento: TipoDescuento | null;
+  valor_descuento: number | null;
+  notas_descuento: string | null;
   notas: string | null;
   created_at: string;
   updated_at: string;
@@ -125,10 +133,17 @@ export interface FacturaResumen {
   folio: string;
   fecha: string;
   subtotal: number;
+  descuento: number;
   iva: number;
   total: number;
   saldo: number;
   estado: EstadoFactura;
+  aplicar_iva: boolean;
+  porcentaje_iva: number | null;
+  aplicar_descuento: boolean;
+  tipo_descuento: TipoDescuento | null;
+  valor_descuento: number | null;
+  notas_descuento: string | null;
   notas: string | null;
   created_at: string;
   updated_at: string;
@@ -149,6 +164,12 @@ export interface FacturaResumen {
 export interface CrearFacturaInput {
   fecha: string;
   notas?: string;
+  aplicar_iva?: boolean;
+  porcentaje_iva?: number;
+  aplicar_descuento?: boolean;
+  tipo_descuento?: TipoDescuento;
+  valor_descuento?: number;
+  notas_descuento?: string;
   pacientes_ids: string[]; // IDs de pacientes
   recetas_ids?: string[]; // IDs de recetas (opcional)
   items: CrearItemInput[];

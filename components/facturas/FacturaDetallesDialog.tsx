@@ -57,10 +57,12 @@ import {
   AlertCircle,
   Download,
   Printer,
+  Edit,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { generateFacturaPDF } from "@/lib/pdf";
+import EditarFacturaDialog from "@/components/facturas/EditarFacturaDialog";
 import {
   Factura,
   FacturaItem,
@@ -93,6 +95,7 @@ export default function FacturaDetallesDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [showPagoDialog, setShowPagoDialog] = useState(false);
   const [showEstadoDialog, setShowEstadoDialog] = useState(false);
+  const [showEditarDialog, setShowEditarDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Estados para registro de pago
@@ -120,9 +123,16 @@ export default function FacturaDetallesDialog({
         fecha_emision: factura.fecha,
         fecha_vencimiento: null,
         subtotal: factura.subtotal,
+        descuento: factura.descuento || 0,
         iva: factura.iva,
         total: factura.total,
         estado: factura.estado,
+        aplicar_iva: factura.aplicar_iva,
+        porcentaje_iva: factura.porcentaje_iva,
+        aplicar_descuento: factura.aplicar_descuento || false,
+        tipo_descuento: factura.tipo_descuento || null,
+        valor_descuento: factura.valor_descuento || null,
+        notas_descuento: factura.notas_descuento || null,
         notas: factura.notas,
         paciente: pacienteData
           ? {
@@ -459,7 +469,7 @@ export default function FacturaDetallesDialog({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Fecha:
+                        Fecha de Emisión:
                       </span>
                       <span>
                         {format(new Date(factura.fecha), "dd/MM/yyyy")}
@@ -467,7 +477,7 @@ export default function FacturaDetallesDialog({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Creada:
+                        Registrada en Sistema:
                       </span>
                       <span className="text-sm">
                         {format(
@@ -505,12 +515,27 @@ export default function FacturaDetallesDialog({
                       </span>
                       <span>{formatCurrency(factura.subtotal)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        IVA (16%):
-                      </span>
-                      <span>{formatCurrency(factura.iva)}</span>
-                    </div>
+                    {factura.aplicar_descuento && factura.descuento > 0 && (
+                      <div className="flex justify-between text-green-600 dark:text-green-400">
+                        <span className="text-sm">
+                          Descuento{" "}
+                          {factura.tipo_descuento === "porcentaje" &&
+                          factura.valor_descuento
+                            ? `(${factura.valor_descuento}%)`
+                            : ""}
+                          :
+                        </span>
+                        <span>-{formatCurrency(factura.descuento)}</span>
+                      </div>
+                    )}
+                    {factura.aplicar_iva && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          IVA ({factura.porcentaje_iva || 16}%):
+                        </span>
+                        <span>{formatCurrency(factura.iva)}</span>
+                      </div>
+                    )}
                     <Separator />
                     <div className="flex justify-between font-medium">
                       <span>Total:</span>
@@ -718,6 +743,15 @@ export default function FacturaDetallesDialog({
               <Button variant="ghost" size="icon" title="Imprimir">
                 <Printer className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Editar factura"
+                onClick={() => setShowEditarDialog(true)}
+                disabled={!factura}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
             </div>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cerrar
@@ -725,6 +759,17 @@ export default function FacturaDetallesDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo para editar factura */}
+      <EditarFacturaDialog
+        facturaId={facturaId}
+        open={showEditarDialog}
+        onOpenChange={setShowEditarDialog}
+        onSuccess={() => {
+          cargarFactura();
+          onUpdate();
+        }}
+      />
 
       {/* Diálogo para registrar pago */}
       <AlertDialog open={showPagoDialog} onOpenChange={setShowPagoDialog}>

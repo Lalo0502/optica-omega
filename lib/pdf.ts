@@ -352,9 +352,16 @@ interface FacturaData {
   fecha_emision: string;
   fecha_vencimiento: string | null;
   subtotal: number;
+  descuento: number;
   iva: number;
   total: number;
   estado: string;
+  aplicar_iva: boolean;
+  porcentaje_iva: number | null;
+  aplicar_descuento: boolean;
+  tipo_descuento: 'porcentaje' | 'fijo' | null;
+  valor_descuento: number | null;
+  notas_descuento: string | null;
   notas: string | null;
   paciente?: {
     primer_nombre: string;
@@ -608,13 +615,46 @@ export const generateFacturaPDF = async (factura: FacturaData) => {
   
   yPos += 6;
   
-  // IVA
-  doc.setFont('helvetica', 'bold');
-  doc.text('IVA:', totalsX, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`$${factura.iva.toFixed(2)}`, totalsX + 50, yPos, { align: 'right' });
+  // Descuento (solo si está aplicado)
+  if (factura.aplicar_descuento && factura.descuento > 0) {
+    const descuentoLabel = factura.tipo_descuento === 'porcentaje' && factura.valor_descuento
+      ? `Descuento (${factura.valor_descuento}%):`
+      : 'Descuento:';
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(colors.success.r, colors.success.g, colors.success.b);
+    doc.text(descuentoLabel, totalsX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`-$${factura.descuento.toFixed(2)}`, totalsX + 50, yPos, { align: 'right' });
+    doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+    
+    yPos += 6;
+    
+    // Mostrar motivo del descuento si existe
+    if (factura.notas_descuento) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(colors.textSecondary.r, colors.textSecondary.g, colors.textSecondary.b);
+      doc.text(`(${factura.notas_descuento})`, totalsX, yPos);
+      doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
+      doc.setFontSize(10);
+      
+      yPos += 6;
+    }
+  }
   
-  yPos += 8;
+  // IVA (solo si está aplicado)
+  if (factura.aplicar_iva) {
+    const porcentaje = factura.porcentaje_iva || 16;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`IVA (${porcentaje}%):`, totalsX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`$${factura.iva.toFixed(2)}`, totalsX + 50, yPos, { align: 'right' });
+    
+    yPos += 8;
+  } else {
+    yPos += 2;
+  }
   
   // Total
   doc.setFillColor(colors.lightGray.r, colors.lightGray.g, colors.lightGray.b);

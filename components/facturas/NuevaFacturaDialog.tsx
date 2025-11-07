@@ -31,6 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Plus,
   Trash2,
@@ -41,7 +42,10 @@ import {
   ShoppingCart,
   Loader2,
   Eye,
+  CalendarDays,
+  DollarSign,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Patient, Receta } from "@/types/pacientes";
@@ -61,6 +65,14 @@ export default function NuevaFacturaDialog({
   // Estados del formulario
   const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd"));
   const [notas, setNotas] = useState("");
+  const [aplicarIva, setAplicarIva] = useState(true);
+  const [porcentajeIva, setPorcentajeIva] = useState(16);
+  
+  // Estados para descuento
+  const [aplicarDescuento, setAplicarDescuento] = useState(false);
+  const [tipoDescuento, setTipoDescuento] = useState<"porcentaje" | "fijo">("porcentaje");
+  const [valorDescuento, setValorDescuento] = useState(0);
+  const [notasDescuento, setNotasDescuento] = useState("");
 
   // Pacientes
   const [pacientes, setPacientes] = useState<Patient[]>([]);
@@ -90,6 +102,7 @@ export default function NuevaFacturaDialog({
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("general");
   const { toast } = useToast();
 
   // Cargar datos pendientes desde receta
@@ -346,10 +359,24 @@ export default function NuevaFacturaDialog({
   // Calcular totales
   const calcularTotales = () => {
     const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-    const iva = subtotal * 0.16;
-    const total = subtotal + iva;
+    
+    // Calcular descuento
+    let descuento = 0;
+    if (aplicarDescuento) {
+      if (tipoDescuento === "porcentaje") {
+        descuento = subtotal * (valorDescuento / 100);
+      } else {
+        descuento = valorDescuento;
+      }
+    }
+    
+    // Calcular IVA sobre el subtotal menos descuento
+    const baseImponible = subtotal - descuento;
+    const iva = aplicarIva ? baseImponible * (porcentajeIva / 100) : 0;
+    
+    const total = baseImponible + iva;
 
-    return { subtotal, iva, total };
+    return { subtotal, descuento, iva, total };
   };
 
   // Formatear moneda
@@ -385,11 +412,22 @@ export default function NuevaFacturaDialog({
 
     try {
       // 1. Crear factura
+      const totales = calcularTotales();
       const { data: facturaData, error: facturaError } = await supabase
         .from("facturas")
         .insert({
           fecha,
           notas: notas || null,
+          aplicar_iva: aplicarIva,
+          porcentaje_iva: aplicarIva ? porcentajeIva : null,
+          aplicar_descuento: aplicarDescuento,
+          tipo_descuento: aplicarDescuento ? tipoDescuento : null,
+          valor_descuento: aplicarDescuento ? valorDescuento : null,
+          notas_descuento: aplicarDescuento && notasDescuento ? notasDescuento : null,
+          descuento: totales.descuento,
+          subtotal: totales.subtotal,
+          iva: totales.iva,
+          total: totales.total,
         })
         .select()
         .single();
@@ -464,6 +502,12 @@ export default function NuevaFacturaDialog({
   const resetForm = () => {
     setFecha(format(new Date(), "yyyy-MM-dd"));
     setNotas("");
+    setAplicarIva(true);
+    setPorcentajeIva(16);
+    setAplicarDescuento(false);
+    setTipoDescuento("porcentaje");
+    setValorDescuento(0);
+    setNotasDescuento("");
     setPacientesSeleccionados([]);
     setRecetasDisponibles([]);
     setRecetasSeleccionadas([]);
@@ -475,6 +519,7 @@ export default function NuevaFacturaDialog({
       precio_unitario: 0,
       subtotal: 0,
     });
+    setActiveTab("general");
   };
 
   // Buscar pacientes cuando cambia el término de búsqueda
@@ -488,18 +533,50 @@ export default function NuevaFacturaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-4 border-b">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-4 border-b shrink-0">
           <DialogTitle className="text-2xl">Nueva Factura</DialogTitle>
           <DialogDescription>
             Crea una nueva factura seleccionando pacientes y agregando items
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-4 shrink-0">
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline">General</span>
+            </TabsTrigger>
+            <TabsTrigger value="pacientes" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Pacientes</span>
+              {pacientesSeleccionados.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {pacientesSeleccionados.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="items" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Items</span>
+              {items.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {items.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="totales" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline">Totales</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            {/* TAB 1: GENERAL */}
+            <TabsContent value="general" className="mt-0 space-y-4">
           {/* Fecha */}
           <div className="grid gap-2">
-            <Label htmlFor="fecha">Fecha</Label>
+            <Label htmlFor="fecha">Fecha de Emisión</Label>
             <Input
               id="fecha"
               type="date"
@@ -508,6 +585,30 @@ export default function NuevaFacturaDialog({
             />
           </div>
 
+          {/* Notas */}
+          <div className="space-y-2">
+            <Label htmlFor="notas">Notas (opcional)</Label>
+            <Textarea
+              id="notas"
+              placeholder="Notas adicionales sobre la factura..."
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">
+                💡 <strong>Consejo:</strong> Después de configurar la fecha y notas,
+                continúa agregando pacientes en la siguiente pestaña.
+              </p>
+            </CardContent>
+          </Card>
+            </TabsContent>
+
+            {/* TAB 2: PACIENTES */}
+            <TabsContent value="pacientes" className="mt-0 space-y-4">
           {/* Pacientes */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -669,8 +770,10 @@ export default function NuevaFacturaDialog({
               </div>
             </div>
           )}
+            </TabsContent>
 
-          <Separator />
+            {/* TAB 3: ITEMS */}
+            <TabsContent value="items" className="mt-0 space-y-4">
 
           {/* Items */}
           <div className="space-y-3">
@@ -814,12 +917,125 @@ export default function NuevaFacturaDialog({
               </div>
             )}
           </div>
+            </TabsContent>
+
+            {/* TAB 4: TOTALES Y CONFIGURACIÓN */}
+            <TabsContent value="totales" className="mt-0 space-y-4">
+          {/* Configuración de Descuento */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="aplicar-descuento-switch" className="text-base">
+                    Aplicar Descuento
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Agregar un descuento a la factura
+                  </p>
+                </div>
+                <Switch
+                  id="aplicar-descuento-switch"
+                  checked={aplicarDescuento}
+                  onCheckedChange={setAplicarDescuento}
+                />
+              </div>
+
+              {aplicarDescuento && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="tipo-descuento">Tipo de Descuento</Label>
+                    <Select
+                      value={tipoDescuento}
+                      onValueChange={(value: "porcentaje" | "fijo") =>
+                        setTipoDescuento(value)
+                      }
+                    >
+                      <SelectTrigger id="tipo-descuento">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="porcentaje">Porcentaje (%)</SelectItem>
+                        <SelectItem value="fijo">Cantidad Fija ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="valor-descuento">
+                      {tipoDescuento === "porcentaje" ? "Porcentaje (%)" : "Cantidad ($)"}
+                    </Label>
+                    <Input
+                      id="valor-descuento"
+                      type="number"
+                      min="0"
+                      max={tipoDescuento === "porcentaje" ? "100" : undefined}
+                      step="0.01"
+                      value={valorDescuento}
+                      onChange={(e) => setValorDescuento(parseFloat(e.target.value) || 0)}
+                      placeholder={tipoDescuento === "porcentaje" ? "Ej: 10" : "Ej: 100"}
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="notas-descuento">Motivo del Descuento (opcional)</Label>
+                    <Input
+                      id="notas-descuento"
+                      type="text"
+                      value={notasDescuento}
+                      onChange={(e) => setNotasDescuento(e.target.value)}
+                      placeholder="Ej: Cliente frecuente, Promoción"
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Configuración de IVA */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="aplicar-iva" className="text-base">
+                    Aplicar IVA
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Activar o desactivar el impuesto
+                  </p>
+                </div>
+                <Switch
+                  id="aplicar-iva"
+                  checked={aplicarIva}
+                  onCheckedChange={setAplicarIva}
+                />
+              </div>
+
+              {aplicarIva && (
+                <div className="space-y-2">
+                  <Label htmlFor="porcentaje-iva">Porcentaje de IVA (%)</Label>
+                  <Input
+                    id="porcentaje-iva"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={porcentajeIva}
+                    onChange={(e) => setPorcentajeIva(parseFloat(e.target.value) || 0)}
+                    placeholder="Ej: 16"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Puedes modificar el porcentaje según sea necesario
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Separator />
 
-          {/* Totales */}
+          {/* Resumen de Totales */}
           {items.length > 0 && (
-            <Card className="bg-muted/50">
+            <Card className="bg-muted/50 border-2">
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
@@ -827,12 +1043,24 @@ export default function NuevaFacturaDialog({
                     {formatCurrency(totales.subtotal)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>IVA (16%):</span>
-                  <span className="font-medium">
-                    {formatCurrency(totales.iva)}
-                  </span>
-                </div>
+                {aplicarDescuento && totales.descuento > 0 && (
+                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                    <span>
+                      Descuento {tipoDescuento === "porcentaje" ? `(${valorDescuento}%)` : ""}:
+                    </span>
+                    <span className="font-medium">
+                      -{formatCurrency(totales.descuento)}
+                    </span>
+                  </div>
+                )}
+                {aplicarIva && (
+                  <div className="flex justify-between text-sm">
+                    <span>IVA ({porcentajeIva}%):</span>
+                    <span className="font-medium">
+                      {formatCurrency(totales.iva)}
+                    </span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
@@ -841,22 +1069,29 @@ export default function NuevaFacturaDialog({
               </CardContent>
             </Card>
           )}
-
-          {/* Notas */}
-          <div className="space-y-2">
-            <Label htmlFor="notas">Notas</Label>
-            <Textarea
-              id="notas"
-              placeholder="Notas adicionales sobre la factura..."
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              rows={3}
-            />
+            </TabsContent>
           </div>
-        </div>
+        </Tabs>
+
+        {/* Resumen fijo y Acciones (fuera de tabs) */}
+        <div className="shrink-0 space-y-4 pt-4 border-t">
+          {items.length > 0 && (
+            <Card className="bg-primary/5">
+              <CardContent className="p-3">
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-muted-foreground">
+                    {pacientesSeleccionados.length} paciente(s) • {items.length} item(s)
+                  </div>
+                  <div className="text-lg font-bold">
+                    Total: {formatCurrency(totales.total)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
         {/* Acciones */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"
@@ -883,6 +1118,7 @@ export default function NuevaFacturaDialog({
               "Crear Factura"
             )}
           </Button>
+        </div>
         </div>
       </DialogContent>
 
