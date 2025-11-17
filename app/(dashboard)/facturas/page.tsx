@@ -49,6 +49,7 @@ import NuevaFacturaDialog from "@/components/facturas/NuevaFacturaDialog";
 import FacturaDetallesDialog from "@/components/facturas/FacturaDetallesDialog";
 import FacturasListSkeleton from "@/components/facturas/FacturasListSkeleton";
 import DeleteConfirmation from "@/components/ui/delete-confirmation";
+import Pagination from "@/components/pacientes/Pagination";
 
 export default function FacturasPage() {
   const [facturas, setFacturas] = useState<FacturaResumen[]>([]);
@@ -64,6 +65,12 @@ export default function FacturasPage() {
     folio: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [facturasPerPage, setFacturasPerPage] = useState(10);
+  const [totalFacturas, setTotalFacturas] = useState(0);
+  
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
@@ -82,6 +89,25 @@ export default function FacturasPage() {
     try {
       setIsLoading(true);
 
+      // Primero, contar el total de facturas (sin paginación)
+      let countQuery = supabase
+        .from("vista_facturas_resumen")
+        .select("*", { count: "exact", head: true });
+
+      // Aplicar los mismos filtros que en la query principal
+      if (statusFilter !== "todos") {
+        countQuery = countQuery.eq("estado", statusFilter);
+      }
+
+      if (debouncedSearchTerm) {
+        countQuery = countQuery.ilike("folio", `%${debouncedSearchTerm}%`);
+      }
+
+      const { count, error: countError } = await countQuery;
+      if (countError) throw countError;
+      setTotalFacturas(count || 0);
+
+      // Query principal con paginación
       let query = supabase.from("vista_facturas_resumen").select("*");
 
       // Aplicar filtro por estado
@@ -96,6 +122,11 @@ export default function FacturasPage() {
 
       // Ordenar por fecha descendente
       query = query.order("fecha", { ascending: false });
+
+      // Aplicar paginación
+      const from = (currentPage - 1) * facturasPerPage;
+      const to = from + facturasPerPage - 1;
+      query = query.range(from, to);
 
       const { data, error } = await query;
 
@@ -116,7 +147,26 @@ export default function FacturasPage() {
 
   useEffect(() => {
     fetchFacturas();
+  }, [debouncedSearchTerm, statusFilter, currentPage, facturasPerPage]);
+
+  // Resetear a página 1 cuando cambien los filtros
+  useEffect(() => {
+    setCurrentPage(1);
   }, [debouncedSearchTerm, statusFilter]);
+
+  // Manejar cambio de página
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Manejar cambio de items por página
+  const handlePerPageChange = (value: string) => {
+    setFacturasPerPage(parseInt(value));
+    setCurrentPage(1); // Resetear a página 1 al cambiar items por página
+  };
+
+  // Calcular total de páginas
+  const totalPages = Math.ceil(totalFacturas / facturasPerPage);
 
   // Formatear moneda
   const formatCurrency = (amount: number) => {
@@ -383,6 +433,17 @@ export default function FacturasPage() {
                 </Card>
               ))}
             </div>
+          )}
+
+          {/* Paginación */}
+          {!isLoading && facturas.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              patientsPerPage={facturasPerPage}
+              handlePageChange={handlePageChange}
+              handlePerPageChange={handlePerPageChange}
+            />
           )}
         </CardContent>
       </Card>

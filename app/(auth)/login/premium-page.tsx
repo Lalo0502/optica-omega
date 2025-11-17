@@ -141,8 +141,7 @@ export default function PremiumLoginPage() {
         // Esperar animación antes de navegar
         setTimeout(() => {
           const from = searchParams.get("from") || "/dashboard";
-          router.push(from);
-          router.refresh();
+          window.location.href = from; // Usar window.location para forzar recarga completa
         }, 2000);
       }
     } catch (error: any) {
@@ -156,7 +155,7 @@ export default function PremiumLoginPage() {
         description: error.message || "Usuario o contraseña incorrectos",
         variant: "destructive",
       });
-    } finally {
+      
       setIsLoading(false);
     }
   }; // Transición de éxito (después del login correcto)

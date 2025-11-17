@@ -1,56 +1,73 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req: request, res });
-  
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-    // Public paths that don't require authentication
-    const publicPaths = ['/login'];
-    const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
-
-    // Check if trying to access root path
-    const isRootPath = request.nextUrl.pathname === '/';
-
-    // Redirect rules
-    if (isRootPath) {
-      // Always redirect root to dashboard
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/dashboard';
-      return NextResponse.redirect(redirectUrl);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+        },
+      },
     }
+  );
 
-    if (!session && !isPublicPath) {
-      // No session and trying to access protected route - redirect to login
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/login';
-      redirectUrl.searchParams.set('from', request.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
+  const { data: { user } } = await supabase.auth.getUser();
 
-    if (session && isPublicPath) {
-      // Has session but trying to access public route - redirect to dashboard
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/dashboard';
-      return NextResponse.redirect(redirectUrl);
-    }
+  // Public paths that don't require authentication
+  const publicPaths = ['/login'];
+  const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
 
-    // Update session if it exists
-    if (session) {
-      res.headers.set('Cache-Control', 'no-store, max-age=0');
-    }
+  // Check if trying to access root path
+  const isRootPath = request.nextUrl.pathname === '/';
 
-    return res;
-  } catch (error) {
-    // On error, redirect to login for safety
+  // Redirect rules
+  if (isRootPath) {
+    // Always redirect root to dashboard
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/login';
+    redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);
   }
+
+  if (!user && !isPublicPath) {
+    // No user and trying to access protected route - redirect to login
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = '/login';
+    redirectUrl.searchParams.set('from', request.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (user && isPublicPath) {
+    // Has user but trying to access public route - redirect to dashboard
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = '/dashboard';
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  return response;
 }
 
 export const config = {
