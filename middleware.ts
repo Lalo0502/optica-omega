@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Public paths that don't require authentication
-  const publicPaths = ['/login'];
+  const publicPaths = ['/login', '/reset-password', '/forgot-password'];
   const isPublicPath = publicPaths.includes(request.nextUrl.pathname);
 
   // Check if trying to access root path
@@ -61,7 +61,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && isPublicPath) {
-    // Has user but trying to access public route - redirect to dashboard
+    // Exception: Allow access to /reset-password even if authenticated (for password recovery)
+    if (request.nextUrl.pathname === '/reset-password') {
+      return response;
+    }
+    
+    // Has user but trying to access other public routes - redirect to dashboard
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);

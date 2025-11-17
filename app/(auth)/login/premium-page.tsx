@@ -1,34 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import {
-  Eye,
-  EyeOff,
-  Loader2,
-  Glasses,
-  ArrowRight,
-  Sparkles,
-  Lock,
-  Mail,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { motion, AnimatePresence } from "framer-motion";
+import LoginForm from "./login-form";
+import ForgotPasswordForm from "./forgot-password-form";
 
 export default function PremiumLoginPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showSuccessTransition, setShowSuccessTransition] = useState(false);
-  const [showError, setShowError] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Mouse tracking para efectos
@@ -118,47 +99,9 @@ export default function PremiumLoginPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Framer Motion values para magnetic button
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        // Mostrar transición de éxito (sin toast)
-        setShowSuccessTransition(true);
-
-        // Esperar animación antes de navegar
-        setTimeout(() => {
-          const from = searchParams.get("from") || "/dashboard";
-          window.location.href = from; // Usar window.location para forzar recarga completa
-        }, 2000);
-      }
-    } catch (error: any) {
-      // Activar animación de error (shake)
-      setShowError(true);
-      setTimeout(() => setShowError(false), 600);
-
-      // Toast de error
-      toast({
-        title: "Error de acceso",
-        description: error.message || "Usuario o contraseña incorrectos",
-        variant: "destructive",
-      });
-      
-      setIsLoading(false);
-    }
-  }; // Transición de éxito (después del login correcto)
+  // Framer Motion values para magnetic button (no usado actualmente pero mantenido para futuras features)
+  // const mouseX = useMotionValue(0);
+  // const mouseY = useMotionValue(0); // Transición de éxito (después del login correcto)
   if (showSuccessTransition) {
     return (
       <motion.div
@@ -259,7 +202,18 @@ export default function PremiumLoginPage() {
               transition={{ delay: 0.4 }}
               className="text-2xl font-light text-slate-900 mb-1"
             >
-              Bienvenido de vuelta
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={isForgotPassword ? "forgot" : "login"}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="block"
+                >
+                  {isForgotPassword ? "Recuperar Contraseña" : "Bienvenido de vuelta"}
+                </motion.span>
+              </AnimatePresence>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
@@ -267,127 +221,49 @@ export default function PremiumLoginPage() {
               transition={{ delay: 0.5 }}
               className="text-slate-500 text-sm"
             >
-              Óptica Omega
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={isForgotPassword ? "forgot-desc" : "login-desc"}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="block"
+                >
+                  {isForgotPassword
+                    ? "Ingresa tu correo para restablecer tu contraseña"
+                    : "Óptica Omega"}
+                </motion.span>
+              </AnimatePresence>
             </motion.p>
           </motion.div>{" "}
-          {/* Card minimalista con animación de error */}
+          {/* Card minimalista con animación */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              x: showError ? [-10, 10, -10, 10, -5, 5, 0] : 0,
-            }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{
               opacity: { delay: 0.4, duration: 0.5, ease: "easeOut" },
               scale: { delay: 0.4, duration: 0.5, ease: "easeOut" },
-              x: { duration: 0.6, ease: "easeInOut" },
             }}
             className="backdrop-blur-sm bg-white border border-slate-200 rounded-2xl p-8 shadow-xl"
           >
-            <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email Input */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: showError ? [1, 1.02, 1] : 1,
-                }}
-                transition={{
-                  opacity: { delay: 0.5, duration: 0.4 },
-                  y: { delay: 0.5, duration: 0.4 },
-                  scale: { duration: 0.3 },
-                }}
-              >
-                <label className="block text-sm font-light text-slate-600 mb-2">
-                  Correo Electrónico
-                </label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={`pl-10 h-12 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white transition-all rounded-lg ${
-                      showError ? "border-red-300 bg-red-50" : ""
-                    }`}
-                    placeholder="tu@email.com"
-                    required
-                  />
-                </div>
-              </motion.div>
-
-              {/* Password Input */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: showError ? [1, 1.02, 1] : 1,
-                }}
-                transition={{
-                  opacity: { delay: 0.6, duration: 0.4 },
-                  y: { delay: 0.6, duration: 0.4 },
-                  scale: { duration: 0.3 },
-                }}
-              >
-                <label className="block text-sm font-light text-slate-600 mb-2">
-                  Contraseña
-                </label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={`pl-10 pr-10 h-12 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white transition-all rounded-lg ${
-                      showError ? "border-red-300 bg-red-50" : ""
-                    }`}
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Button minimalista */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.4 }}
-              >
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-light rounded-lg border border-slate-900 hover:border-slate-800 transition-all flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Iniciando sesión...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Iniciar Sesión</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </motion.button>
-              </motion.div>
-            </form>
+            <AnimatePresence mode="wait">
+              {isForgotPassword ? (
+                <ForgotPasswordForm
+                  key="forgot-password"
+                  email={email}
+                  setEmail={setEmail}
+                  onBackToLogin={() => setIsForgotPassword(false)}
+                />
+              ) : (
+                <LoginForm
+                  key="login"
+                  email={email}
+                  setEmail={setEmail}
+                  onForgotPassword={() => setIsForgotPassword(true)}
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
           {/* Footer minimalista */}
           <motion.p

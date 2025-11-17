@@ -13,6 +13,9 @@ import {
   Settings,
   Calendar,
   Tag,
+  ChevronDown,
+  ChevronRight,
+  UserCog,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,7 @@ const Sidebar = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [showLogoutTransition, setShowLogoutTransition] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [isConfigExpanded, setIsConfigExpanded] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Obtener datos del usuario
@@ -65,6 +69,13 @@ const Sidebar = () => {
       window.removeEventListener("resize", checkIfMobile);
     };
   }, []);
+
+  // Auto-expand configuración si estamos en una sub-ruta
+  useEffect(() => {
+    if (pathname.startsWith("/configuracion")) {
+      setIsConfigExpanded(true);
+    }
+  }, [pathname]);
 
   // Handle mouse enter/leave for desktop
   const handleMouseEnter = () => {
@@ -132,6 +143,14 @@ const Sidebar = () => {
       name: "Configuración",
       path: "/configuracion",
       icon: Settings,
+      hasSubroutes: true,
+      subroutes: [
+        {
+          name: "Usuarios",
+          path: "/configuracion/usuarios",
+          icon: UserCog,
+        },
+      ],
     },
   ];
 
@@ -193,41 +212,144 @@ const Sidebar = () => {
         <nav className="flex-1 p-4 space-y-1">
           {routes.map((route) => {
             const isActive = pathname === route.path;
+            const hasSubroutes = route.hasSubroutes && route.subroutes;
+            const isSubrouteActive = hasSubroutes && route.subroutes?.some(sub => pathname === sub.path);
+            
             return (
-              <Link key={route.path} href={route.path}>
-                <motion.div
-                  className={cn(
-                    "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200",
-                    isActive
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                    isCollapsed && "justify-center px-3"
-                  )}
-                  whileHover={{ scale: 1.02, x: isCollapsed ? 0 : 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <route.icon
+              <div key={route.path}>
+                {/* Ruta principal */}
+                {hasSubroutes ? (
+                  <motion.div
+                    onClick={() => {
+                      if (!isCollapsed) {
+                        setIsConfigExpanded(!isConfigExpanded);
+                      }
+                    }}
                     className={cn(
-                      "w-5 h-5 flex-shrink-0",
-                      isActive ? "text-white" : "text-slate-500"
+                      "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 cursor-pointer",
+                      isActive || isSubrouteActive
+                        ? "bg-slate-900 text-white shadow-md"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                      isCollapsed && "justify-center px-3"
                     )}
-                  />
-                  <AnimatePresence>
-                    {!isCollapsed && (
-                      <motion.span
-                        className="text-sm font-light tracking-wide"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {route.name}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </Link>
+                    whileHover={{ scale: 1.02, x: isCollapsed ? 0 : 4 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <route.icon
+                      className={cn(
+                        "w-5 h-5 flex-shrink-0",
+                        isActive || isSubrouteActive ? "text-white" : "text-slate-500"
+                      )}
+                    />
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.span
+                          className="text-sm font-light tracking-wide flex-1"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {route.name}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1, rotate: isConfigExpanded ? 180 : 0 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown className={cn(
+                            "w-4 h-4",
+                            isActive || isSubrouteActive ? "text-white" : "text-slate-500"
+                          )} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ) : (
+                  <Link href={route.path}>
+                    <motion.div
+                      className={cn(
+                        "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200",
+                        isActive
+                          ? "bg-slate-900 text-white shadow-md"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                        isCollapsed && "justify-center px-3"
+                      )}
+                      whileHover={{ scale: 1.02, x: isCollapsed ? 0 : 4 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <route.icon
+                        className={cn(
+                          "w-5 h-5 flex-shrink-0",
+                          isActive ? "text-white" : "text-slate-500"
+                        )}
+                      />
+                      <AnimatePresence>
+                        {!isCollapsed && (
+                          <motion.span
+                            className="text-sm font-light tracking-wide"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            {route.name}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  </Link>
+                )}
+
+                {/* Sub-rutas */}
+                <AnimatePresence>
+                  {hasSubroutes && isConfigExpanded && !isCollapsed && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="ml-4 mt-1 space-y-1"
+                    >
+                      {route.subroutes?.map((subroute) => {
+                        const isSubActive = pathname === subroute.path;
+                        return (
+                          <Link key={subroute.path} href={subroute.path}>
+                            <motion.div
+                              className={cn(
+                                "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
+                                isSubActive
+                                  ? "bg-slate-100 text-slate-900"
+                                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                              )}
+                              whileHover={{ scale: 1.02, x: 2 }}
+                              whileTap={{ scale: 0.98 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <subroute.icon
+                                className={cn(
+                                  "w-4 h-4 flex-shrink-0",
+                                  isSubActive ? "text-slate-700" : "text-slate-400"
+                                )}
+                              />
+                              <span className="text-sm font-light tracking-wide">
+                                {subroute.name}
+                              </span>
+                            </motion.div>
+                          </Link>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             );
           })}
         </nav>{" "}
@@ -357,32 +479,113 @@ const Sidebar = () => {
                 <nav className="space-y-1">
                   {routes.map((route) => {
                     const isActive = pathname === route.path;
+                    const hasSubroutes = route.hasSubroutes && route.subroutes;
+                    const isSubrouteActive = hasSubroutes && route.subroutes?.some(sub => pathname === sub.path);
+                    
                     return (
-                      <Link
-                        key={route.path}
-                        href={route.path}
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <motion.div
-                          className={cn(
-                            "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200",
-                            isActive
-                              ? "bg-slate-900 text-white shadow-md"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                          )}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <route.icon
+                      <div key={route.path}>
+                        {/* Ruta principal */}
+                        {hasSubroutes ? (
+                          <motion.div
+                            onClick={() => setIsConfigExpanded(!isConfigExpanded)}
                             className={cn(
-                              "w-5 h-5",
-                              isActive ? "text-white" : "text-slate-500"
+                              "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 cursor-pointer",
+                              isActive || isSubrouteActive
+                                ? "bg-slate-900 text-white shadow-md"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                             )}
-                          />
-                          <span className="text-sm font-light tracking-wide">
-                            {route.name}
-                          </span>
-                        </motion.div>
-                      </Link>
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <route.icon
+                              className={cn(
+                                "w-5 h-5",
+                                isActive || isSubrouteActive ? "text-white" : "text-slate-500"
+                              )}
+                            />
+                            <span className="text-sm font-light tracking-wide flex-1">
+                              {route.name}
+                            </span>
+                            <motion.div
+                              animate={{ rotate: isConfigExpanded ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ChevronDown className={cn(
+                                "w-4 h-4",
+                                isActive || isSubrouteActive ? "text-white" : "text-slate-500"
+                              )} />
+                            </motion.div>
+                          </motion.div>
+                        ) : (
+                          <Link
+                            href={route.path}
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <motion.div
+                              className={cn(
+                                "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200",
+                                isActive
+                                  ? "bg-slate-900 text-white shadow-md"
+                                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                              )}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <route.icon
+                                className={cn(
+                                  "w-5 h-5",
+                                  isActive ? "text-white" : "text-slate-500"
+                                )}
+                              />
+                              <span className="text-sm font-light tracking-wide">
+                                {route.name}
+                              </span>
+                            </motion.div>
+                          </Link>
+                        )}
+
+                        {/* Sub-rutas mobile */}
+                        <AnimatePresence>
+                          {hasSubroutes && isConfigExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="ml-4 mt-1 space-y-1"
+                            >
+                              {route.subroutes?.map((subroute) => {
+                                const isSubActive = pathname === subroute.path;
+                                return (
+                                  <Link
+                                    key={subroute.path}
+                                    href={subroute.path}
+                                    onClick={() => setIsOpen(false)}
+                                  >
+                                    <motion.div
+                                      className={cn(
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
+                                        isSubActive
+                                          ? "bg-slate-100 text-slate-900"
+                                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                      )}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                      <subroute.icon
+                                        className={cn(
+                                          "w-4 h-4",
+                                          isSubActive ? "text-slate-700" : "text-slate-400"
+                                        )}
+                                      />
+                                      <span className="text-sm font-light tracking-wide">
+                                        {subroute.name}
+                                      </span>
+                                    </motion.div>
+                                  </Link>
+                                );
+                              })}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     );
                   })}
                 </nav>

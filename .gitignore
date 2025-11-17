@@ -41,4 +41,7 @@ supabase/migrations/
 *.tsbuildinfo
 next-env.d.ts
 
+# email templates (sensitive)
+email-templates/
+
 .vercel
